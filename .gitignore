@@ -1,0 +1,34 @@
+# Секреты и переменные окружения
+.env
+.env/
+
+# IDE
+.idea
+.vscode/
+
+# Виртуальное окружение
+.venv
+venv
+.venv/
+venv/
+
+# Кеш и базы данных
+*.db
+*.sqlite
+*.sqlite3
+
+# ChromaDB
+chroma_db/
+.chroma/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Временные файлы
+*.log
+*.tmp
+.DS_Store
