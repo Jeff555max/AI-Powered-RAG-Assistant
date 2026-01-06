@@ -43,8 +43,15 @@ class RAGPipeline:
         
         # Загрузка документов, если коллекция пустая
         if self.vector_store.collection.count() == 0:
-            print(f"Загрузка документов из {data_file}...")
-            self.vector_store.load_documents(data_file)
+            # Преобразуем относительный путь в абсолютный
+            if not os.path.isabs(data_file):
+                data_file = os.path.join(os.path.dirname(__file__), data_file)
+            
+            if os.path.exists(data_file):
+                print(f"Загрузка документов из {data_file}...")
+                self.vector_store.load_documents(data_file)
+            else:
+                print(f"Предупреждение: файл {data_file} не найден. Векторное хранилище пустое.")
         
         print("Инициализация кеша...")
         self.cache = RAGCache(db_path=cache_db_path)
