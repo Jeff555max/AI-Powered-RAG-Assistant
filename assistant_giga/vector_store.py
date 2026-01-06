@@ -307,16 +307,24 @@ class VectorStore:
 if __name__ == "__main__":
     # Тестирование векторного хранилища
     import sys
+    from pathlib import Path
+    from dotenv import load_dotenv
     
-    if not os.getenv("OPENAI_API_KEY"):
-        print("Ошибка: установите переменную окружения OPENAI_API_KEY")
+    # Загрузка .env
+    env_path = Path(__file__).parent.parent / '.env'
+    if env_path.exists():
+        load_dotenv(env_path)
+    
+    if not os.getenv("GIGACHAT_AUTH_KEY") or not os.getenv("GIGACHAT_RQUID"):
+        print("Ошибка: установите переменные окружения GIGACHAT_AUTH_KEY и GIGACHAT_RQUID")
         sys.exit(1)
     
     vector_store = VectorStore(collection_name="test_collection")
     
     # Загрузка документов
-    if os.path.exists("data/docs.txt"):
-        vector_store.load_documents("data/docs.txt")
+    data_file = os.path.join(os.path.dirname(__file__), "data/docs.txt")
+    if os.path.exists(data_file):
+        vector_store.load_documents(data_file)
     
     # Поиск
     results = vector_store.search("Что такое машинное обучение?", top_k=3)
