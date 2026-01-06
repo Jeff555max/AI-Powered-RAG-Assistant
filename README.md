@@ -1,6 +1,6 @@
 # AI-Powered RAG Assistant
 
-RAG (Retrieval-Augmented Generation) ассистент с поддержкой двух режимов работы: OpenAI API и GigaChat от Сбера.
+RAG (Retrieval-Augmented Generation) ассистент с поддержкой двух режимов работы: OpenAI API и GigaChat от Сбера, реализован в виде GUI приложения.
 
 ## Возможности
 
