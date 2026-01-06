@@ -3,7 +3,7 @@ GUI приложение для RAG ассистента.
 """
 
 import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox
+from tkinter import ttk, scrolledtext, messagebox, filedialog
 import sys
 import os
 from pathlib import Path
@@ -95,6 +95,9 @@ class RAGAssistantGUI:
         
         ttk.Button(button_frame, text="Очистить кеш", 
                   command=self._clear_cache).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(button_frame, text="Загрузить документы", 
+                  command=self._load_documents).pack(side=tk.LEFT, padx=5)
         
     def _on_mode_change(self):
         """Обработка смены режима."""
@@ -282,6 +285,91 @@ class RAGAssistantGUI:
             self.pipeline.cache.clear()
             self._add_system_message("Кеш очищен")
             messagebox.showinfo("Успех", "Кеш успешно очищен")
+    
+    def _load_documents(self):
+        """Загрузка документов и создание эмбеддингов."""
+        if not self.pipeline:
+            messagebox.showwarning("Предупреждение", "Сначала инициализируйте систему")
+            return
+        
+        # Выбор файла
+        file_path = filedialog.askopenfilename(
+            title="Выберите файл с документами",
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+        )
+        
+        if not file_path:
+            return
+        
+        # Подтверждение
+        current_count = self.pipeline.vector_store.collection.count()
+        if current_count > 0:
+            if not messagebox.askyesno(
+                "Подтверждение",
+                f"В векторном хранилище уже есть {current_count} документов.\n" +
+                "Загрузка новых документов добавит их к существующим.\n" +
+                "Продолжить?"
+            ):
+                return
+        
+        self._add_system_message(f"Загрузка документов из {os.path.basename(file_path)}...")
+        
+        # Запуск в отдельном потоке
+        thread = threading.Thread(target=self._load_documents_thread, args=(file_path,))
+        thread.daemon = True
+        thread.start()
+    
+    def _load_documents_thread(self, file_path):
+        """Загрузка документов в отдельном потоке."""
+        try:
+            # Чтение файла
+            with open(file_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+            
+            # Разбиение на чанки
+            chunks = self.pipeline.vector_store._chunk_text(text)
+            self.root.after(0, lambda: self._add_system_message(f"Текст разбит на {len(chunks)} чанков"))
+            
+            # Создание эмбеддингов и добавление в ChromaDB
+            documents = []
+            ids = []
+            embeddings = []
+            
+            current_max_id = self.pipeline.vector_store.collection.count()
+            
+            for i, chunk in enumerate(chunks):
+                embedding = self.pipeline.vector_store._create_embedding(chunk)
+                documents.append(chunk)
+                ids.append(f"doc_{current_max_id + i}")
+                embeddings.append(embedding)
+                
+                if (i + 1) % 10 == 0:
+                    self.root.after(0, lambda idx=i: self._add_system_message(
+                        f"Обработано {idx + 1}/{len(chunks)} чанков"
+                    ))
+            
+            # Добавление в ChromaDB
+            self.pipeline.vector_store.collection.add(
+                documents=documents,
+                embeddings=embeddings,
+                ids=ids
+            )
+            
+            self.root.after(0, lambda: self._load_documents_success(len(chunks)))
+            
+        except Exception as e:
+            self.root.after(0, lambda: self._load_documents_error(str(e)))
+    
+    def _load_documents_success(self, count):
+        """Успешная загрузка документов."""
+        total = self.pipeline.vector_store.collection.count()
+        self._add_system_message(f"✓ Загружено {count} документов. Всего в хранилище: {total}")
+        messagebox.showinfo("Успех", f"Документы успешно загружены!\nДобавлено: {count}\nВсего: {total}")
+    
+    def _load_documents_error(self, error):
+        """Ошибка загрузки документов."""
+        self._add_system_message(f"✗ Ошибка загрузки: {error}")
+        messagebox.showerror("Ошибка", f"Не удалось загрузить документы:\n{error}")
 
 
 def main():
